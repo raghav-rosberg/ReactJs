@@ -1,0 +1,133 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hello React</title>
+    <script src="react.js"></script>
+    <script src="JSXTransformer.js"></script>
+    <script src="jquery.min.js"></script>
+	<script src="marked.min.js"></script>
+  </head>
+  <body>
+    <div id="content"></div>
+    <script type="text/jsx">	
+		var User = React.createClass({
+		  render: function() {
+			var rawMarkup = marked(this.props.children.toString(), {sanitize: true});
+			return (
+			  <div>
+				<h2>
+				  {this.props.UserName}
+				</h2>
+				<span dangerouslySetInnerHTML={{__html: rawMarkup}} />
+			  </div>
+			);
+		  }
+		});
+		
+		var UserList = React.createClass({
+		  render: function() {
+			var userNodes = this.props.data.map(function (user) {
+			  return (
+				<User UserName={user.UserName}>
+				  {user.Designation}
+				  {user.EmailId}
+				  {user.MobileNo}
+				</User>
+			  );
+			});
+			return (
+			  <div>
+				{userNodes}
+			  </div>
+			);
+		  }
+		});
+
+		var UserForm = React.createClass({
+		  handleSubmit: function(e) {
+			e.preventDefault();
+			var UserName = React.findDOMNode(this.refs.UserName).value.trim();
+			var Designation = React.findDOMNode(this.refs.Designation).value.trim();
+			var EmailId = React.findDOMNode(this.refs.EmailId).value.trim();
+			var MobileNo = React.findDOMNode(this.refs.MobileNo).value.trim();
+			if (!Designation || !UserName || !EmailId || !MobileNo) {
+			  return;
+			}
+			
+			this.props.onUserSubmit({UserName: UserName, Designation: Designation, EmailId: EmailId, MobileNo: MobileNo});
+			React.findDOMNode(this.refs.UserName).value = '';
+			React.findDOMNode(this.refs.Designation).value = '';
+			React.findDOMNode(this.refs.EmailId).value = '';
+			React.findDOMNode(this.refs.MobileNo).value = '';
+			return;
+		  },
+		  render: function() {
+			return (
+			  <form onSubmit={this.handleSubmit}>
+				<input type="text" placeholder="Your name" ref="UserName" />
+				<input type="text" placeholder="Your Designation" ref="Designation" />
+				<input type="text" placeholder="Your EmailId" ref="EmailId" />
+				<input type="text" placeholder="Mobile Number" ref="MobileNo" />
+				<input type="submit" value="Post" />
+			  </form>
+			);
+		  }
+		});		
+		var UserBox = React.createClass({
+		   loadUsersFromServer: function() {
+			$.ajax({
+			  url: this.props.url,
+			  dataType: 'json',
+			  cache: false,
+			  success: function(data) {
+				this.setState({data: data});
+			  }.bind(this),
+			  error: function(xhr, status, err) {
+				alert(err);
+				console.error(this.props.url, status, err.toString());
+			  }.bind(this)
+			});
+		  },
+		  handleUserSubmit: function(user) {
+			var users = this.state.data;
+			var newUsers = users.concat([user]);
+			user.UserPrivilegeID = 1;
+			$.ajax({
+			  url: this.props.url,
+			  dataType: 'json',
+			  type: 'POST',
+			  data: user,
+			  success: function() {
+				this.setState({data: newUsers});
+			  }.bind(this),
+			  error: function(xhr, status, err) {
+				console.error(this.props.url, status, err.toString());
+			  }.bind(this)
+			});
+		  },
+		  getInitialState: function() {
+			return {data: []};
+		  },
+		  componentDidMount: function() {
+			this.loadUsersFromServer();
+		  },
+		  render: function() {
+			return (
+			  <div>
+				<h1>Users</h1>
+				<UserList data={this.state.data} />
+				<UserForm onUserSubmit={this.handleUserSubmit} />
+			  </div>
+			);
+		  }
+		});
+		
+		React.render(
+		  <UserBox url="http://localhost:2966/api/User" />,
+		  document.getElementById('content')
+		);
+    </script>
+  </body>
+</html>
